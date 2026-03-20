@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="browse-container" style="max-width: 1200px; margin: 0 auto; min-height: 80vh;">
+    <div class="browse-header"
+        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+        <h2 class="page-title" style="margin: 0;">My Pastes</h2>
+        <form action="{{ url_for('auth.profile') }}" method="GET" style="display: flex; gap: 0.5rem;">
+            <input type="text" name="q" placeholder="Search your pastes..."
+                value="{{ search_query if search_query else '' }}" class="form-control"
+                style="padding: 0.5rem 1rem; width: 300px; background: #0f0f0f; border: 1px solid #333; color: white;">
+            <button type="submit" class="btn btn-secondary" style="padding: 0.5rem 1rem;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="11" cy="11" r="8"></circle>
+                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                </svg>
+            </button>
+        </form>
+    </div>
+
+    {% set shuffled_layout = generate_balanced_layout() %}
+
+    <div class="bento-grid" id="sortable-grid">
+        {% for paste in pastes.items %}
+        {% set style = shuffled_layout[loop.index0 % 12] %}
+        <div class="bento-card {{ style[0] }} {{ style[1] }}" style="position: relative;">
+            <a href="{{ url_for('main.view_paste', custom_id=paste.custom_id) }}"
+                style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; z-index: 1;"></a>
+
+            <div class="lang-badge">{{ paste.language }}</div>
+
+            <div style="flex-grow: 1; pointer-events: none;">
+                <h3>{{ paste.title or 'Untitled' }}</h3>
+                <div class="bento-preview">
+                    {% if paste.password_hash %}
+                    <span style="color: var(--text-secondary); font-style: italic;">Password Protected</span>
+                    {% else %}
+                    {{ paste.content }}
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="bento-meta"
+                style="flex-direction: column; gap: 0.5rem; align-items: stretch; position: relative; z-index: 2;">
+                <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                    <div style="display: flex; gap: 4px; align-items: center;">
+                        {% if paste.is_public %}
+                        <span
+                            style="color: #4caf50; font-size: 0.7rem; display: flex; align-items: center; gap: 4px;">Public</span>
+                        {% else %}
+                        <span <span
+                            style="color: #ff9800; font-size: 0.7rem; display: flex; align-items: center; gap: 4px;">Private</span>
+                        {% endif %}
+                    </div>
+                    <span>
+                        {% set adj_time = paste.created_at + timedelta(hours=5, minutes=30) %}
+                        {% set now_adj = datetime.utcnow() + timedelta(hours=5, minutes=30) %}
+                        {% if adj_time.date() == now_adj.date() %}
+                        {{ adj_time.strftime('%H:%M') }}
+                        {% else %}
+                        {{ adj_time.strftime('%d %b') }}
+                        {% endif %}
+                    </span>
+                </div>
+
+                <div style="display: flex; gap: 0.5rem; width: 100%;">
+                    <a href="{{ url_for('main.view_paste', custom_id=paste.custom_id) }}" class="btn btn-sm"
+                        style="flex: 1; text-align: center; background: rgba(255,255,255,0.1); color: white; cursor: pointer; text-decoration: none;">View</a>
+                    <a href="{{ url_for('main.edit_paste', custom_id=paste.custom_id) }}" class="btn btn-sm"
+                        style="flex: 1; text-align: center; background: rgba(33, 150, 243, 0.2); color: #64b5f6; cursor: pointer; text-decoration: none;">Edit</a>
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div class="text-center" style="grid-column: 1/-1; padding: 4rem; color: var(--text-secondary);">
+            {% if search_query %}
+            <p>No pastes found matching "{{ search_query }}".</p>
+            {% else %}
+            <p>You haven't created any pastes yet.</p>
+            <a href="{{ url_for('main.home') }}" class="btn btn-primary" style="margin-top: 1rem;">Create One</a>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+
+    
+    {% if pastes.pages > 1 %}
+    <div class="pagination" style="display: flex; justify-content: center; gap: 0.5rem; margin-top: 2rem;">
+        {% for page_num in pastes.iter_pages(left_edge=1, right_edge=1, left_current=1, right_current=2) %}
+        {% if page_num %}
+        {% if pastes.page == page_num %}
+        <a class="btn btn-primary disabled" href="#">{{ page_num }}</a>
+        {% else %}
+        <a class="btn btn-outline-primary" href="{{ url_for('auth.profile', page=page_num, q=search_query) }}">{{
+            page_num }}</a>
+        {% endif %}
+        {% else %}
+        <span style="color: var(--text-secondary); align-self: center;">...</span>
+        {% endif %}
+        {% endfor %}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

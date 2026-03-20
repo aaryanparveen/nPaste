@@ -1,0 +1,159 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card">
+    <div class="card-header d-flex justify-between align-center">
+        <div>
+            <h2 style="margin: 0; display: inline-block;">{{ paste.title or 'Untitled Paste' }}</h2>
+            <div class="paste-meta-chips">
+                <span class="meta-chip author" title="Author">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                        <circle cx="12" cy="7" r="4"></circle>
+                    </svg>
+                    {{ paste.author.username if paste.author else 'Guest' }}
+                </span>
+
+                <span class="meta-chip lang" title="Language">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="16 18 22 12 16 6"></polyline>
+                        <polyline points="8 6 2 12 8 18"></polyline>
+                    </svg>
+                    {{ paste.language }}
+                </span>
+
+                <span class="meta-chip date" title="Created At">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                        <line x1="16" y1="2" x2="16" y2="6"></line>
+                        <line x1="8" y1="2" x2="8" y2="6"></line>
+                        <line x1="3" y1="10" x2="21" y2="10"></line>
+                    </svg>
+                    {{ paste.created_at | to_ist | strftime('%Y-%m-%d %H:%M') }}
+                </span>
+
+                <span class="meta-chip views" title="Views">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                        <circle cx="12" cy="12" r="3"></circle>
+                    </svg>
+                    {{ paste.views }}
+                </span>
+
+                {% for tag in paste.tags %}
+                <a href="{{ url_for('main.browse', tag=tag.name) }}" class="meta-chip tag"
+                    style="text-decoration: none; cursor: pointer;">
+                    #{{ tag.name }}
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+        <div>
+            {% if current_user.is_authenticated %}
+            {% if paste.author == current_user or current_user.is_admin %}
+            <div style="display: inline-block;">
+                <form action="{{ url_for('main.delete_paste', custom_id=paste.custom_id) }}" method="POST"
+                    onsubmit="return confirm('Are you sure you want to delete this paste?');" style="display: inline;">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                    <button type="submit" class="btn btn-danger btn-sm"
+                        style="margin-right: 0.5rem; background-color: #dc3545; border-color: #dc3545; color: white;">Delete</button>
+                </form>
+                {% if paste.author == current_user %}
+                <a href="{{ url_for('main.edit_paste', custom_id=paste.custom_id) }}" class="btn btn-primary btn-sm"
+                    style="margin-right: 0.5rem;">Edit</a>
+                {% endif %}
+            </div>
+            {% endif %}
+            {% endif %}
+
+            <a href="{{ url_for('main.raw_paste', custom_id=paste.custom_id) }}" class="btn btn-secondary btn-sm"
+                target="_blank" style="margin-right: 0.5rem;">Raw</a>
+            {% if paste.filename %}
+            <a href="{{ url_for('main.download_file', filename=paste.filename) }}" class="btn btn-secondary btn-sm"
+                style="margin-right: 0.5rem;">
+                Download Attachment
+            </a>
+            {% endif %}
+            <button id="copyBtn" class="btn btn-primary btn-sm">Copy</button>
+        </div>
+    </div>
+
+    
+    <div class="code-view-container"
+        style="background: var(--input-bg); border: 1px solid var(--border-color); border-radius: 8px; margin-bottom: 2rem;">
+        <div class="code-content"
+            style="padding: 1rem; overflow-x: auto; font-family: 'JetBrains Mono', monospace; font-size: 14px; line-height: 1.6;">
+            {{ highlighted_code|safe }}
+        </div>
+    </div>
+
+    
+    <div id="pasteContent" style="display: none;">{{ paste.content }}</div>
+
+    
+    <div class="comments-section" style="margin-top: 3rem;">
+        <h3 style="margin-bottom: 1.5rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem;">
+            Comments</h3>
+
+        <div class="comments-list" style="margin-bottom: 2rem;">
+            {% for comment in paste.comments %}
+            <div class="comment-card"
+                style="background: var(--input-bg); padding: 1rem; border-radius: 8px; margin-bottom: 1rem; border: 1px solid var(--border-color);">
+                <div class="comment-header"
+                    style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                    <strong style="color: var(--accent-red);">{{ comment.author.username }}</strong>
+                    <small style="color: var(--text-secondary);">{{ comment.created_at | to_ist | strftime('%Y-%m-%d
+                        %H:%M')
+                        }}</small>
+                </div>
+                <div class="comment-body" style="color: var(--text-primary);">
+                    {{ comment.content }}
+                </div>
+            </div>
+            {% else %}
+            <p style="color: var(--text-secondary);">No comments yet.</p>
+            {% endfor %}
+        </div>
+
+        {% if current_user.is_authenticated %}
+        <form method="POST" action="{{ url_for('main.post_comment', custom_id=paste.custom_id) }}" class="comment-form">
+            {{ comment_form.hidden_tag() }}
+            <div class="form-group">
+                {{ comment_form.content(class="form-control", rows=3, placeholder="Leave a comment...") }}
+            </div>
+            {{ comment_form.submit(class="btn btn-primary btn-sm", style="margin-top: 0.5rem;") }}
+        </form>
+        {% else %}
+        <p><a href="{{ url_for('auth.login') }}" style="color: var(--accent-red);">Login</a> to leave a comment.</p>
+        {% endif %}
+    </div>
+
+    <div class="mt-2 text-right" style="margin-top: 2rem;">
+        <a href="{{ url_for('main.home') }}" class="btn btn-secondary btn-sm">Create New Paste</a>
+    </div>
+</div>
+
+
+<script src="{{ url_for('static', filename='js/highlight.min.js') }}"></script>
+<script src="{{ url_for('static', filename='js/highlight.min.js') }}"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const copyBtn = document.getElementById('copyBtn');
+        if (copyBtn) {
+            copyBtn.addEventListener('click', () => {
+                const textToCopy = document.getElementById('pasteContent').textContent;
+                navigator.clipboard.writeText(textToCopy).then(() => {
+                    const originalText = copyBtn.innerText;
+                    copyBtn.innerText = 'Copied!';
+                    setTimeout(() => {
+                        copyBtn.innerText = originalText;
+                    }, 2000);
+                });
+            });
+        }
+    });
+</script>
+{% endblock %}

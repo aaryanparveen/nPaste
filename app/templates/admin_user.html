@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="user-detail-container" style="max-width: 1200px; margin: 0 auto; padding-top: 2rem;">
+
+    
+    <div class="card mb-4"
+        style="border: 1px solid var(--accent-red); background: linear-gradient(160deg, #1a0507, #000);">
+        <div class="card-header" style="border-bottom: 1px solid rgba(211, 69, 91, 0.3);">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <h1 style="margin: 0; color: #fff;">User: {{ user.username }}</h1>
+                <span class="badge" style="background: var(--accent-red); color: white;">{{ 'ADMIN' if user.is_admin
+                    else 'USER' }}</span>
+            </div>
+        </div>
+        <div
+            style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 2rem; margin-top: 1.5rem;">
+            <div>
+                <label class="text-muted"
+                    style="font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px;">Email</label>
+                <div style="font-size: 1.1rem; font-family: 'JetBrains Mono', monospace;">{{ user.email }}</div>
+            </div>
+            <div>
+                <label class="text-muted" style="font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px;">IP
+                    Address</label>
+                <div style="font-size: 1.1rem; font-family: 'JetBrains Mono', monospace; color: var(--accent-red);">{{
+                    user.ip_address or 'Unknown' }}</div>
+            </div>
+            <div>
+                <label class="text-muted"
+                    style="font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px;">Password Hash</label>
+                <div
+                    style="font-size: 0.8rem; font-family: 'JetBrains Mono', monospace; overflow-wrap: break-word; color: #666;">
+                    {{ user.password_hash[:40] }}...</div>
+            </div>
+        </div>
+    </div>
+
+    
+    <div class="card mb-4" style="border: 1px solid #333;">
+        <h3 style="margin-top: 0; border-bottom: 1px solid #333; padding-bottom: 1rem;">Danger Zone</h3>
+        <div style="display: flex; gap: 1rem; flex-wrap: wrap; margin-top: 1rem;">
+
+            
+            <form action="{{ url_for('auth.admin_reset_password', user_id=user.id) }}" method="POST"
+                style="flex: 1; min-width: 300px; display: flex; gap: 0.5rem;">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                <input type="text" name="new_password" class="form-control" placeholder="New Password" required
+                    style="background: #000;">
+                <button type="submit" class="btn btn-primary"
+                    onclick="return confirm('Reset password for this user?')">Reset</button>
+            </form>
+
+            
+            <form action="{{ url_for('auth.admin_nuke_user', user_id=user.id) }}" method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                <button type="submit" class="btn btn-danger"
+                    onclick="return confirm('DELETE ALL PASTES by this user? This cannot be undone.')">
+                    NUKE ALL PASTES ({{ user.pastes|length }})
+                </button>
+            </form>
+        </div>
+    </div>
+
+    
+    <h2 class="page-title" style="margin-bottom: 1.5rem;">User Pastes</h2>
+
+    {% set layout_pattern = cycler(
+    ('bento-black', 'big-box'),
+    ('bento-grey', ''),
+    ('bento-red-dark', ''),
+    ('bento-charcoal', 'row-2'),
+    ('bento-red', 'span-2'),
+    ('bento-black', ''),
+    ('bento-grey', ''),
+    ('bento-red-dark', 'span-2'),
+    ('bento-black', 'row-2'),
+    ('bento-charcoal', ''),
+    ('bento-grey', ''),
+    ('bento-red', '')
+    ) %}
+
+    <div class="bento-grid">
+        {% for paste in user.pastes %}
+        {% set style = layout_pattern.next() %}
+        <div class="bento-card {{ style[0] }} {{ style[1] }}" style="position: relative;">
+            <div class="lang-badge">{{ paste.language }}</div>
+
+            <div style="flex-grow: 1;">
+                <h3 style="margin-right: 2rem;">
+                    <a href="{{ url_for('main.view_paste', custom_id=paste.custom_id) }}" target="_blank">{{ paste.title
+                        or 'Untitled' }}</a>
+                </h3>
+                <div class="bento-preview">
+                    {{ paste.content }}
+                </div>
+            </div>
+
+            <div class="bento-meta" style="flex-direction: column; gap: 0.5rem; align-items: stretch;">
+                <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                    
+                    <div style="display: flex; gap: 0.5rem; align-items: center;">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                            <circle cx="12" cy="12" r="3"></circle>
+                        </svg>
+                        <span style="font-size: 0.8rem; color: #888;">{{ paste.views }}</span>
+                    </div>
+                    <span style="font-family: 'JetBrains Mono'; color: var(--accent-red); font-size: 0.7rem;">{{
+                        paste.ip_address or 'Unknown IP' }}</span>
+                </div>
+
+                <div style="display: flex; gap: 0.5rem; width: 100%;">
+                    <a href="{{ url_for('main.view_paste', custom_id=paste.custom_id) }}" class="btn btn-sm"
+                        style="flex: 1; text-align: center; background: rgba(255,255,255,0.1); color: white;"
+                        target="_blank">View</a>
+
+                    <form action="{{ url_for('auth.delete_paste', paste_id=paste.id) }}" method="POST" style="flex: 1;">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                        <button type="submit" class="btn btn-sm btn-danger"
+                            style="width: 100%; background: #ff3333; color: white; border: none; font-weight: bold;">DELETE</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <p class="text-muted">No pastes found for this user.</p>
+        {% endfor %}
+    </div>
+
+</div>
+{% endblock %}

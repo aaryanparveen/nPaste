@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% if title %}{{ title }} - nPaste{% else %}nPaste{% endif %}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/themes.css') }}">
+
+    <script src="{{ url_for('static', filename='js/highlight.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/particles.js') }}"></script>
+    <script>
+        if (window.hljs) hljs.highlightAll();
+
+        function setTheme(theme) {
+            document.body.setAttribute('data-hljs-theme', theme);
+            localStorage.setItem('nPaste-theme', theme);
+            document.cookie = "nPaste-theme=" + theme + "; path=/; max-age=31536000";
+        }
+
+        function getSavedTheme() {
+            const local = localStorage.getItem('nPaste-theme');
+            if (local) return local;
+
+            const match = document.cookie.match(new RegExp('(^| )nPaste-theme=([^;]+)'));
+            if (match) return match[2];
+
+            return 'atom-one-dark';
+        }
+
+        const savedTheme = getSavedTheme();
+        document.body.setAttribute('data-hljs-theme', savedTheme);
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const selector = document.getElementById('theme-selector');
+            if (selector) selector.value = savedTheme;
+        });
+    </script>
+</head>
+
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="{{ url_for('main.home') }}" class="brand">
+                nPaste
+            </a>
+
+
+
+            <div class="nav-links">
+                <a href="{{ url_for('main.browse') }}" class="nav-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                    </svg>
+                </a>
+                <a href="{{ url_for('main.home') }}">New Paste</a>
+                {% if current_user.is_authenticated %}
+                <a href="{{ url_for('auth.profile') }}">My Pastes</a>
+                {% if current_user.is_admin %}
+                <a href="{{ url_for('auth.admin_dashboard') }}">Admin</a>
+                {% endif %}
+                <a href="{{ url_for('auth.logout') }}">Logout</a>
+                {% else %}
+                <a href="{{ url_for('auth.login') }}">Login</a>
+                <a href="{{ url_for('auth.register') }}">Register</a>
+                {% endif %}
+            </div>
+        </div>
+    </nav>
+
+    <div class="flash-messages">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        {% for category, message in messages %}
+        <div class="alert alert-{{ category }}">
+            {{ message }}
+            <span onclick="this.parentElement.style.opacity='0';setTimeout(()=>this.parentElement.remove(),300);"
+                style="cursor:pointer; margin-left:10px;">&times;</span>
+        </div>
+        {% endfor %}
+        {% endif %}
+        {% endwith %}
+    </div>
+
+    <div class="container">
+        {% block content %}{% endblock %}
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/ScrollTrigger.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
+    <script src="{{ url_for('static', filename='js/cursor.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+
+</html>

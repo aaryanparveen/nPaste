@@ -1,0 +1,229 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="editor-container">
+    <form method="POST" enctype="multipart/form-data" id="pasteForm">
+        {{ form.hidden_tag() }}
+
+        
+        <div class="editor-top-bar">
+            <h1 class="page-title">
+                {% if title %}{{ title }}{% else %}New Paste{% endif %}
+            </h1>
+            {{ form.submit(class="btn btn-primary submit-btn", form="pasteForm") }}
+        </div>
+
+        <div class="card editor-card">
+            
+            
+            <div class="editor-wrapper">
+                <div class="editor-gutter" aria-hidden="true" id="editorGutter">1</div>
+                <div class="editor-container-right">
+                    <div class="editor-backdrop" aria-hidden="true">
+                        <pre><code id="highlighting-content"></code></pre>
+                    </div>
+                    {{ form.content(class="form-control", id="editing-textarea", placeholder="Paste your code here...",
+                    spellcheck="false") }}
+                </div>
+            </div>
+        </div>
+
+        <div class="paste-options">
+            <div class="options-title">
+                Configuration
+            </div>
+
+            <div class="options-grid">
+                
+                <div class="options-column">
+                    <div class="form-group">
+                        {{ form.title.label }}
+                        {{ form.title(class="form-control", placeholder="Untitled Paste") }}
+                    </div>
+
+                    <div class="form-group">
+                        {{ form.language.label }}
+                        {{ form.language(class="form-control") }}
+                    </div>
+
+                    <div class="form-group">
+                        {{ form.tags.label }}
+                        {{ form.tags(class="form-control", placeholder="e.g. python, script") }}
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-control-label">Editor Theme</label>
+                        <select id="theme-selector" onchange="setTheme(this.value)" class="form-control">
+                            <option value="atom-one-dark">Atom One Dark</option>
+                            <option value="dracula">Dracula</option>
+                            <option value="nord">Nord</option>
+                            <option value="monokai">Monokai</option>
+                        </select>
+                    </div>
+                </div>
+
+                
+                <div class="options-column">
+                    
+                    <div class="setting-row">
+                        <div class="setting-label">
+                            <span class="setting-name">Private Paste</span>
+                            <span class="setting-desc">Not listed in public index</span>
+                        </div>
+                        <label class="toggle-switch">
+                            {{ form.is_private(id="is_private") }}
+                            <span class="slider round"></span>
+                        </label>
+                    </div>
+
+                    
+                    <div class="setting-row">
+                        <div class="setting-label">
+                            <span class="setting-name">Password Protection</span>
+                            <span class="setting-desc">Restrict access with a password</span>
+                        </div>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="passwordToggle">
+                            <span class="slider round"></span>
+                        </label>
+                    </div>
+                    
+                    <div class="form-group slide-reveal" id="passwordField">
+                        {{ form.custom_password(class="form-control", placeholder="Enter Password") }}
+                    </div>
+
+                    
+                    <div class="setting-row">
+                        <div class="setting-label">
+                            <span class="setting-name">Expiration</span>
+                            <span class="setting-desc">Auto-delete after time</span>
+                        </div>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="expiryToggle">
+                            <span class="slider round"></span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            
+            <div class="form-group slide-reveal" id="expiryField">
+                <div class="range-container">
+                    <div class="range-header">
+                        <label>Time Limit</label>
+                        <div class="current-expiry" id="expiryDisplay">Never</div>
+                    </div>
+                    <input type="range" min="0" max="5" value="5" class="expiry-slider" id="expiryRange">
+                    <div class="range-labels">
+                        <span>10m</span>
+                        <span>1h</span>
+                        <span>1d</span>
+                        <span>1w</span>
+                        <span>1m</span>
+                        <span>Never</span>
+                    </div>
+                </div>
+                
+                {{ form.expiry(class="d-none", id="expirySelect") }}
+            </div>
+
+            
+            <div class="form-group" style="margin-top: 2rem;">
+                <label class="form-control-label">Attachment</label>
+                <div class="upload-area" id="uploadArea">
+                    <div class="upload-icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                            <polyline points="17 8 12 3 7 8"></polyline>
+                            <line x1="12" y1="3" x2="12" y2="15"></line>
+                        </svg>
+                    </div>
+                    <p class="upload-text">Drag & Drop your file here</p>
+                    <p class="upload-or">OR</p>
+                    <button type="button" class="btn btn-primary" id="browseBtn">Browse Files</button>
+                    {{ form.attachment(style="display: none;", id="fileInput") }}
+                    <p id="fileName" class="file-name"></p>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+
+<script>
+    const expiryRange = document.getElementById('expiryRange');
+    const expirySelect = document.getElementById('expirySelect');
+    const expiryDisplay = document.getElementById('expiryDisplay');
+
+    const expiryMap = ['10m', '1h', '1d', '1w', '1m', 'never'];
+    const expiryLabels = ['10 Minutes', '1 Hour', '1 Day', '1 Week', '1 Month', 'Never'];
+
+    expirySelect.value = 'never';
+
+    expiryRange.addEventListener('input', (e) => {
+        const index = parseInt(e.target.value);
+        expirySelect.value = expiryMap[index];
+        expiryDisplay.innerText = expiryLabels[index];
+    });
+
+    const passwordToggle = document.getElementById('passwordToggle');
+    const passwordField = document.getElementById('passwordField');
+    const customPasswordInput = document.querySelector('input[name="custom_password"]');
+
+    passwordToggle.addEventListener('change', () => {
+        if (passwordToggle.checked) {
+            passwordField.classList.add('active');
+            setTimeout(() => customPasswordInput.focus(), 300);
+        } else {
+            passwordField.classList.remove('active');
+            customPasswordInput.value = ''; // Clear password when disabled
+        }
+    });
+
+    const expiryToggle = document.getElementById('expiryToggle');
+    const expiryField = document.getElementById('expiryField');
+
+    expiryToggle.addEventListener('change', () => {
+        if (expiryToggle.checked) {
+            expiryField.classList.add('active');
+            expiryRange.value = 5;
+            expirySelect.value = 'never';
+            expiryDisplay.innerText = 'Never';
+        } else {
+            expiryField.classList.remove('active');
+            expirySelect.value = 'never'; // Reset to never
+            expiryRange.value = 5; // Reset slider position
+            expiryDisplay.innerText = 'Never'; // Reset display
+        }
+    });
+
+    const textarea = document.getElementById('editing-textarea');
+    const highlightingContent = document.getElementById('highlighting-content');
+    const backdrop = document.querySelector('.editor-backdrop');
+    const gutter = document.getElementById('editorGutter');
+
+    if (textarea && highlightingContent && gutter) {
+        textarea.addEventListener('scroll', () => {
+            backdrop.scrollTop = textarea.scrollTop;
+            backdrop.scrollLeft = textarea.scrollLeft;
+            gutter.scrollTop = textarea.scrollTop;
+        });
+
+        function updateHighlighting() {
+            let text = textarea.value;
+            if (text[text.length - 1] == "\n") {
+                text += " ";
+            }
+            highlightingContent.textContent = text;
+
+            const lineCount = text.split('\n').length;
+            gutter.innerHTML = Array(lineCount).fill(0).map((_, i) => i + 1).join('<br>');
+
+            hljs.highlightElement(highlightingContent);
+        }
+
+        textarea.addEventListener('input', updateHighlighting);
+        updateHighlighting();
+
+    }
+</script>
+{% endblock %}
